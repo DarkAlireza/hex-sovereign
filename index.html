@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hex Sovereign — Turn-Based Strategy for Humans & AI Agents</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #131b2e;
+      --panel-border: #243252;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --gold: #f59e0b;
+      --accent: #38bdf8;
+      --p0: #ef4444;
+      --p1: #3b82f6;
+      --p2: #10b981;
+      --p3: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 15%, #17233d 0%, #090d16 75%);
+      color: var(--text);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: rgba(13, 19, 34, 0.92);
+      border-bottom: 1px solid var(--panel-border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand h1 {
+      font-size: 1.25rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #f8fafc;
+      font-weight: 800;
+    }
+    .badge {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button, select, input {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid #334155;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button:hover:not(:disabled) {
+      background: #283750;
+      border-color: var(--accent);
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border-color: #3b82f6;
+      font-weight: 600;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: #f59e0b;
+      font-weight: 600;
+      color: #fff;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 300px 1fr 340px;
+      gap: 16px;
+      padding: 16px 20px;
+      flex: 1;
+      max-width: 1580px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    @media (max-width: 1180px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: rgba(19, 27, 46, 0.88);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card h2 {
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding-bottom: 6px;
+    }
+    .player-card {
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 2px solid transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .player-card.active {
+      border-color: #fbbf24;
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.22);
+    }
+    .player-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+    .player-stats {
+      display: flex;
+      gap: 10px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+    }
+    .board-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .status-banner {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--panel-border);
+      padding: 10px 16px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .ap-pips {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .pip {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #334155;
+      border: 1px solid #64748b;
+    }
+    .pip.on {
+      background: #fbbf24;
+      box-shadow: 0 0 8px #fbbf24;
+    }
+    svg#hexBoard {
+      width: 100%;
+      max-width: 680px;
+      height: 540px;
+      user-select: none;
+    }
+    .hex-poly {
+      stroke: #334155;
+      stroke-width: 2.2;
+      cursor: pointer;
+      transition: filter 0.14s ease, stroke-width 0.14s ease;
+    }
+    .hex-poly:hover {
+      filter: brightness(1.22);
+      stroke: #e2e8f0;
+      stroke-width: 3;
+    }
+    .hex-selected {
+      stroke: #fbbf24 !important;
+      stroke-width: 4 !important;
+      filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65));
+    }
+    .hex-target {
+      stroke: #38bdf8 !important;
+      stroke-width: 3.5 !important;
+      stroke-dasharray: 5 3;
+    }
+    .action-bar {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+    @media (max-width: 720px) {
+      .action-bar { grid-template-columns: repeat(2, 1fr); }
+    }
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 9px 6px;
+      border-radius: 9px;
+      font-weight: 600;
+    }
+    .action-btn small {
+      font-size: 0.71rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .log-list {
+      height: 230px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.8rem;
+      background: rgba(9, 13, 22, 0.7);
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+    }
+    .log-entry {
+      padding: 4px 6px;
+      border-radius: 5px;
+      background: rgba(30, 41, 59, 0.45);
+      line-height: 1.35;
+    }
+    .code-box {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.74rem;
+      background: #090d16;
+      border: 1px solid #1e293b;
+      padding: 8px;
+      border-radius: 8px;
+      color: #38bdf8;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .seat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+    .rules-box {
+      font-size: 0.79rem;
+      line-height: 1.45;
+      color: #cbd5e1;
+    }
+    .replay-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.75);
+      padding: 7px 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>Hex Sovereign</h1>
+      <span class="badge">Humans + HTTP/JSON Agents</span>
+      <span class="badge" id="matchBadge">Match: HEX-DEMO</span>
+    </div>
+    <div class="top-controls">
+      <label style="font-size:0.8rem;color:var(--muted);">Code:</label>
+      <input id="matchCodeInput" value="HEX-DEMO" style="width:110px;font-weight:700;text-transform:uppercase;" />
+      <select id="playerCountSelect">
+        <option value="2">2 Players</option>
+        <option value="3">3 Players</option>
+        <option value="4">4 Players</option>
+      </select>
+      <button class="btn-primary" id="newMatchBtn">New Match</button>
+      <button class="btn-gold" id="botStepBtn">Trigger Bot Move</button>
+      <button id="simFullBtn">Auto-Sim Match</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- LEFT COLUMN: LOBBY SEATS, PLAYERS & RULES -->
+    <section class="card">
+      <h2>Players & Seats (2–4)</h2>
+      <div id="playersContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
+
+      <h2>Seat Configuration</h2>
+      <div id="seatConfigContainer" style="display:flex;flex-direction:column;gap:6px;"></div>
+
+      <h2>One-Paragraph Rules</h2>
+      <div class="rules-box">
+        Compete over <strong>12 rounds</strong> on a 19-hex island to be first to <strong>20 Crowns</strong> (or lead at Round 12). Each turn gives <strong>2 Action Points (AP)</strong>:
+        <ul style="margin-left:16px;margin-top:4px;display:flex;flex-direction:column;gap:3px;">
+          <li><strong>March (1 AP):</strong> Move <code>units - 1</code> into an adjacent hex. Attacker adds <strong>+1 Forge bonus</strong>; Defender adds <strong>+2 Bastion shield</strong>. Conquering the center <strong>Crown Spire (0,0)</strong> grants <strong>+3 Crowns</strong> (+2/round).</li>
+          <li><strong>Harvest (1 AP):</strong> Gain <code>2 + 2×Crystal</code> Gold (+1 Crown if holding Spire).</li>
+          <li><strong>Recruit (1 AP, 2G):</strong> Add +2 units to a controlled hex (max 9).</li>
+          <li><strong>Bastion (1 AP, 3G):</strong> Fortify a hex (+2 Defense, +1 Crown now & per round).</li>
+          <li><strong>Arcane Strike (1 AP, 3G):</strong> Deal -2 units & shatter Bastion on an adjacent enemy hex.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- CENTER COLUMN: TACTICAL HEX BOARD & ACTIONS -->
+    <section class="card board-wrap">
+      <div class="status-banner">
+        <div>
+          <strong id="turnHeadline" style="font-size:1rem;">Round 1 / 12 — Player 1's Turn</strong>
+          <div id="selectionHint" style="font-size:0.8rem;color:var(--muted);margin-top:2px;">
+            Click one of your colored hexes to March, Recruit, Bastion, or Arcane Strike.
+          </div>
+        </div>
+        <div class="ap-pips">
+          <span style="font-size:0.8rem;color:var(--muted);margin-right:4px;">AP:</span>
+          <span class="pip on" id="pip1"></span>
+          <span class="pip on" id="pip2"></span>
+        </div>
+      </div>
+
+      <svg id="hexBoard" viewBox="-310 -260 620 520"></svg>
+
+      <div class="action-bar">
+        <button class="action-btn" id="actHarvest">
+          <span>Harvest</span>
+          <small id="harvestHint">1 AP · +Gold</small>
+        </button>
+        <button class="action-btn" id="actRecruit">
+          <span>Recruit +2</span>
+          <small>1 AP · 2 Gold</small>
+        </button>
+        <button class="action-btn" id="actBastion">
+          <span>Bastion Shield</span>
+          <small>1 AP · 3 Gold (+1 Crown)</small>
+        </button>
+        <button class="action-btn" id="actStrike">
+          <span>Arcane Strike</span>
+          <small>1 AP · 3 Gold (-2 Enemy)</small>
+        </button>
+        <button class="action-btn" id="actEndTurn">
+          <span>End Turn</span>
+          <small>Pass remaining AP</small>
+        </button>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: REPLAY SCRUBBER, MATCH LOG & AGENT HTTP/JSON API -->
+    <section class="card">
+      <h2>Match Log & Replay Scrubber</h2>
+      <div class="replay-bar">
+        <button id="repPrevBtn">&laquo; Prev</button>
+        <span id="repLabel" style="font-size:0.78rem;color:var(--muted);">Live (Step 0)</span>
+        <button id="repNextBtn">Next &raquo;</button>
+        <button id="repLiveBtn">Live</button>
+        <button id="repExportBtn" title="Download full JSON replay">JSON</button>
+      </div>
+      <div class="log-list" id="logList"></div>
+
+      <h2>HTTP/JSON Agent API (Live Sync)</h2>
+      <div style="font-size:0.77rem;color:var(--muted);line-height:1.4;">
+        External AI agents can play in this match via standard HTTP/JSON (local REST server <code>localhost:8787</code> or serverless Cloud Relay <code>ntfy.sh</code>):
+      </div>
+      <div class="code-box" id="apiSnippetBox"></div>
+      <div style="display:flex;gap:6px;">
+        <button id="syncCloudBtn" style="flex:1;">Broadcast State to Cloud Agent</button>
+        <button id="copyStateBtn">Copy State JSON</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const HEX_COORDS = [];
+    for (let q = -2; q <= 2; q++) {
+      for (let r = Math.max(-2, -q - 2); r <= Math.min(2, -q + 2); r++) {
+        HEX_COORDS.push([q, r]);
+      }
+    }
+    const DIRS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+    const START_CORNERS = [
+      { key: "-2,0", name: "Crimson House", color: "#ef4444" },
+      { key: "2,0", name: "Azure Syndicate", color: "#3b82f6" },
+      { key: "0,-2", name: "Emerald Order", color: "#10b981" },
+      { key: "0,2", name: "Amber Covenant", color: "#f59e0b" },
+    ];
+    const CRYSTAL_KEYS = new Set(["-1,-1", "1,1", "-1,2", "1,-2", "0,-1", "0,1"]);
+    const FORGE_KEYS = new Set(["-1,0", "1,0", "-1,1", "1,-1"]);
+
+    let seatRoles = ["human", "bot:tactician", "bot:warlord", "bot:economist"];
+    let state = null;
+    let selectedHex = null;
+    let pendingMode = "march"; // "march" | "strike"
+    let replayIndex = null; // null means live
+    let cloudEventSource = null;
+
+    function hexKey(q, r) { return `${q},${r}`; }
+    function parseKey(k) { return k.split(",").map(Number); }
+    function areAdjacent(k1, k2) {
+      const [q1, r1] = parseKey(k1);
+      const [q2, r2] = parseKey(k2);
+      return DIRS.some(([dq, dr]) => dq === q2 - q1 && dr === r2 - r1);
+    }
+    function neighborsOf(k) {
+      const [q, r] = parseKey(k);
+      return DIRS.map(([dq, dr]) => hexKey(q + dq, r + dr))
+        .filter((nk) => HEX_COORDS.some(([cq, cr]) => hexKey(cq, cr) === nk));
+    }
+    function countOwned(st, pid, terrainFilter = null) {
+      return Object.values(st.tiles).filter(
+        (t) => t.owner === pid && (!terrainFilter || t.terrain === terrainFilter)
+      ).length;
+    }
+
+    function createMatchState(code, numPlayers) {
+      const n = Math.min(4, Math.max(2, Number(numPlayers) || 2));
+      const players = [];
+      for (let i = 0; i < n; i++) {
+        const spec = seatRoles[i] || "bot:tactician";
+        const [role, style] = spec.split(":");
+        players.push({
+          id: i,
+          name: role === "human" ? `Human P${i + 1}` : role === "agent" ? `HTTP Agent P${i + 1}` : `${(style || "tactician").toUpperCase()} Bot`,
+          role,
+          style: style || "tactician",
+          color: START_CORNERS[i].color,
+          homeKey: START_CORNERS[i].key,
+          gold: 4,
+          crowns: 2,
+        });
+      }
+      const tiles = {};
+      for (const [q, r] of HEX_COORDS) {
+        const k = hexKey(q, r);
+        let terrain = "plains";
+        if (k === "0,0") terrain = "spire";
+        else if (CRYSTAL_KEYS.has(k)) terrain = "crystal";
+        else if (FORGE_KEYS.has(k)) terrain = "forge";
+        tiles[k] = {
+          key: k, q, r, terrain, owner: null,
+          units: terrain === "spire" ? 3 : terrain === "crystal" ? 1 : 0,
+          bastion: false,
+        };
+      }
+      for (let i = 0; i < n; i++) {
+        const hk = START_CORNERS[i].key;
+        tiles[hk].owner = i;
+        tiles[hk].units = 4;
+        tiles[hk].terrain = "citadel";
+      }
+      const st = {
+        code,
+        status: "active",
+        round: 1,
+        maxRounds: 12,
+        targetCrowns: 20,
+        turnPlayer: 0,
+        apLeft: 2,
+        winner: null,
+        players,
+        tiles,
+        log: [{ seq: 0, round: 1, player: null, text: `Match ${code} initialized (${n} seats).` }],
+        snapshots: [],
+      };
+      saveSnapshot(st);
+      return st;
+    }
+
+    function saveSnapshot(st) {
+      st.snapshots.push({
+        seq: st.log.length - 1,
+        round: st.round,
+        turnPlayer: st.turnPlayer,
+        apLeft: st.apLeft,
+        players: JSON.parse(JSON.stringify(st.players)),
+        tiles: JSON.parse(JSON.stringify(st.tiles)),
+        note: st.log[st.log.length - 1]?.text || "",
+      });
+    }
+
+    function computeLegalMoves(st, pid = st.turnPlayer) {
+      if (st.status !== "active" || st.turnPlayer !== pid || st.apLeft <= 0) return [];
+      const p = st.players[pid];
+      const moves = [{
+        action: "harvest",
+        description: `Harvest (+${2 + countOwned(st, pid, "crystal") * 2} Gold${st.tiles["0,0"].owner === pid ? ", +1 Crown" : ""})`,
+      }];
+      for (const t of Object.values(st.tiles)) {
+        if (t.owner !== pid) continue;
+        if (p.gold >= 2 && t.units < 9) {
+          moves.push({ action: "recruit", from: t.key, description: `Recruit +2 at (${t.key})` });
+        }
+        if (p.gold >= 3 && !t.bastion) {
+          moves.push({ action: "bastion", from: t.key, description: `Bastion at (${t.key})` });
+        }
+        if (t.units >= 2) {
+          for (const nk of neighborsOf(t.key)) {
+            moves.push({ action: "march", from: t.key, to: nk, description: `March (${t.key}) -> (${nk})` });
+          }
+        }
+        if (p.gold >= 3) {
+          for (const nk of neighborsOf(t.key)) {
+            if (st.tiles[nk].owner !== pid && st.tiles[nk].units > 0) {
+              moves.push({ action: "strike", from: t.key, to: nk, description: `Strike (${nk}) from (${t.key})` });
+            }
+          }
+        }
+      }
+      moves.push({ action: "end_turn", description: "End turn" });
+      return moves;
+    }
+
+    function applyMove(st, move) {
+      if (st.status !== "active") return;
+      const pid = st.turnPlayer;
+      const p = st.players[pid];
+      const act = move.action;
+
+      if (act === "end_turn") {
+        st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name} ended turn.` });
+        advanceTurn(st);
+        saveSnapshot(st);
+        return;
+      }
+      if (act === "harvest") {
+        const crystals = countOwned(st, pid, "crystal");
+        const gain = 2 + crystals * 2;
+        p.gold += gain;
+        let cMsg = "";
+        if (st.tiles["0,0"].owner === pid) { p.crowns += 1; cMsg = " + 1 Spire Crown"; }
+        st.apLeft -= 1;
+        st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name} harvested +${gain} Gold${cMsg}.` });
+      } else if (act === "recruit") {
+        const t = st.tiles[move.from];
+        if (!t || t.owner !== pid || p.gold < 2) return;
+        p.gold -= 2;
+        t.units = Math.min(9, t.units + 2);
+        st.apLeft -= 1;
+        st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name} recruited +2 units at (${t.key}) [now ${t.units}].` });
+      } else if (act === "bastion") {
+        const t = st.tiles[move.from];
+        if (!t || t.owner !== pid || p.gold < 3 || t.bastion) return;
+        p.gold -= 3;
+        t.bastion = true;
+        p.crowns += 1;
+        st.apLeft -= 1;
+        st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name} built a Bastion at (${t.key}) (+1 Crown, +2 Def).` });
+      } else if (act === "strike") {
+        const src = st.tiles[move.from];
+        const dst = st.tiles[move.to];
+        if (!src || !dst || src.owner !== pid || p.gold < 3 || !areAdjacent(src.key, dst.key)) return;
+        p.gold -= 3;
+        dst.units = Math.max(0, dst.units - 2);
+        dst.bastion = false;
+        st.apLeft -= 1;
+        st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name} cast Arcane Strike on (${dst.key}) [-2 units, Bastion broken].` });
+      } else if (act === "march") {
+        const src = st.tiles[move.from];
+        const dst = st.tiles[move.to];
+        if (!src || !dst || src.owner !== pid || src.units < 2 || !areAdjacent(src.key, dst.key)) return;
+        const marching = src.units - 1;
+        src.units = 1;
+        if (dst.owner === pid) {
+          dst.units = Math.min(9, dst.units + marching);
+          st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name} reinforced (${dst.key}) with ${marching} units [now ${dst.units}].` });
+        } else {
+          const forgeBonus = countOwned(st, pid, "forge") > 0 ? 1 : 0;
+          const defBonus = dst.bastion ? 2 : 0;
+          const atk = marching + forgeBonus;
+          const dfn = dst.units + defBonus;
+          if (atk > dfn) {
+            const wasEnemy = dst.owner !== null;
+            dst.owner = pid;
+            dst.units = Math.max(1, marching - Math.ceil(dfn * 0.6));
+            dst.bastion = false;
+            const cGain = dst.terrain === "spire" ? 3 : wasEnemy ? 2 : 1;
+            p.crowns += cGain;
+            if (dst.terrain === "crystal") p.gold += 1;
+            st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name} conquered (${dst.key}) [${dst.terrain.toUpperCase()}] (+${cGain} Crowns)!` });
+          } else {
+            dst.units = Math.max(1, dst.units - Math.floor(atk * 0.5));
+            st.log.push({ seq: st.log.length, round: st.round, player: pid, text: `${p.name}'s attack on (${dst.key}) was repelled (${dst.units} left).` });
+          }
+        }
+        st.apLeft -= 1;
+      }
+
+      checkWin(st);
+      if (st.status === "active" && st.apLeft <= 0) {
+        advanceTurn(st);
+      }
+      saveSnapshot(st);
+      replayIndex = null;
+      renderAll();
+      broadcastCloudState();
+      scheduleBotIfTurn();
+    }
+
+    function advanceTurn(st) {
+      const n = st.players.length;
+      const next = (st.turnPlayer + 1) % n;
+      if (next === 0) {
+        for (const p of st.players) {
+          const held = countOwned(st, p.id);
+          const bastions = Object.values(st.tiles).filter((t) => t.owner === p.id && t.bastion).length;
+          const spire = st.tiles["0,0"].owner === p.id ? 2 : 0;
+          p.crowns += spire + (held >= 5 ? 1 : 0) + (bastions > 0 ? 1 : 0);
+          p.gold += 1 + countOwned(st, p.id, "crystal");
+        }
+        st.round += 1;
+        checkWin(st);
+        if (st.status !== "active") return;
+      }
+      st.turnPlayer = next;
+      st.apLeft = 2;
+    }
+
+    function checkWin(st) {
+      for (const p of st.players) {
+        if (p.crowns >= st.targetCrowns) {
+          st.status = "finished";
+          st.winner = p.id;
+          st.log.push({ seq: st.log.length, round: st.round, player: p.id, text: `🏆 VICTORY! ${p.name} reached ${p.crowns} Crowns!` });
+          return;
+        }
+      }
+      if (st.round > st.maxRounds) {
+        st.status = "finished";
+        const sorted = [...st.players].sort((a, b) => b.crowns - a.crowns || countOwned(st, b.id) - countOwned(st, a.id));
+        st.winner = sorted[0].id;
+        st.log.push({ seq: st.log.length, round: 12, player: sorted[0].id, text: `🏆 Round 12 complete! ${sorted[0].name} wins (${sorted[0].crowns} Crowns)!` });
+      }
+    }
+
+    function chooseBotMove(st) {
+      const pid = st.turnPlayer;
+      const p = st.players[pid];
+      const legal = computeLegalMoves(st, pid);
+      let best = legal[0];
+      let bestScore = -1e9;
+      for (const m of legal) {
+        let s = 0;
+        if (m.action === "march") {
+          const src = st.tiles[m.from];
+          const dst = st.tiles[m.to];
+          const atk = (src.units - 1) + (countOwned(st, pid, "forge") > 0 ? 1 : 0);
+          const dfn = dst.units + (dst.bastion ? 2 : 0);
+          if (dst.owner !== pid) {
+            if (atk > dfn) {
+              s += 42 + (dst.terrain === "spire" ? 45 : dst.terrain === "crystal" ? 28 : 16);
+              if (dst.owner !== null) s += p.style === "warlord" ? 28 : 16;
+            } else s -= 55;
+          } else s += dst.terrain === "spire" && dst.units < 5 ? 16 : 2;
+        } else if (m.action === "recruit") {
+          s += st.tiles[m.from].units <= 3 ? 26 : 12;
+        } else if (m.action === "harvest") {
+          s += 14 + countOwned(st, pid, "crystal") * 10 + (p.gold < 2 ? 16 : 0);
+          if (p.style === "economist") s += 12;
+        } else if (m.action === "bastion") {
+          s += st.tiles[m.from].terrain === "spire" ? 30 : 18;
+        } else if (m.action === "strike") {
+          s += 28;
+        } else if (m.action === "end_turn") {
+          s = -12;
+        }
+        s += Math.random() * 3;
+        if (s > bestScore) { bestScore = s; best = m; }
+      }
+      return best;
+    }
+
+    let botTimer = null;
+    function scheduleBotIfTurn() {
+      if (botTimer) clearTimeout(botTimer);
+      if (!state || state.status !== "active") return;
+      const cur = state.players[state.turnPlayer];
+      if (cur && cur.role === "bot") {
+        botTimer = setTimeout(() => {
+          if (state.status === "active" && state.players[state.turnPlayer].role === "bot") {
+            applyMove(state, chooseBotMove(state));
+          }
+        }, 420);
+      }
+    }
+
+    // Axial (q, r) to pixel (x, y)
+    const HEX_SIZE = 50;
+    function axialToPixel(q, r) {
+      const x = HEX_SIZE * Math.sqrt(3) * (q + r / 2);
+      const y = HEX_SIZE * (3 / 2) * r;
+      return [x, y];
+    }
+    function hexPoints(cx, cy, size) {
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 180) * (60 * i - 30);
+        pts.push(`${(cx + size * Math.cos(angle)).toFixed(1)},${(cy + size * Math.sin(angle)).toFixed(1)}`);
+      }
+      return pts.join(" ");
+    }
+
+    function renderAll() {
+      const view = replayIndex !== null && state.snapshots[replayIndex]
+        ? state.snapshots[replayIndex]
+        : state;
+
+      document.getElementById("matchBadge").textContent = `Match: ${state.code}`;
+      const curP = view.players[view.turnPlayer] || view.players[0];
+      const headline = document.getElementById("turnHeadline");
+      if (state.status === "finished" && replayIndex === null) {
+        const winP = state.players[state.winner];
+        headline.textContent = `🏆 Match Complete — Winner: ${winP ? winP.name : "Draw"}!`;
+      } else {
+        headline.textContent = `Round ${view.round} / ${state.maxRounds} — ${curP.name}'s Turn (${curP.role.toUpperCase()})`;
+      }
+
+      document.getElementById("pip1").className = `pip ${view.apLeft >= 1 ? "on" : ""}`;
+      document.getElementById("pip2").className = `pip ${view.apLeft >= 2 ? "on" : ""}`;
+
+      // Players list
+      const pc = document.getElementById("playersContainer");
+      pc.innerHTML = "";
+      for (const p of view.players) {
+        const div = document.createElement("div");
+        div.className = `player-card ${view.turnPlayer === p.id && state.status === "active" ? "active" : ""}`;
+        div.innerHTML = `
+          <div class="player-head">
+            <span style="display:flex;align-items:center;gap:7px;">
+              <span style="width:11px;height:11px;border-radius:50%;background:${p.color};display:inline-block;"></span>
+              ${p.name}
+            </span>
+            <span style="color:#fbbf24;">👑 ${p.crowns} / 20</span>
+          </div>
+          <div class="player-stats">
+            <span>🪙 Gold: <strong>${p.gold}</strong></span>
+            <span>⬢ Hexes: <strong>${countOwned(view, p.id)}</strong></span>
+            <span>💎 Crystals: <strong>${countOwned(view, p.id, "crystal")}</strong></span>
+          </div>
+        `;
+        pc.appendChild(div);
+      }
+
+      // Render SVG Hex Board
+      const svg = document.getElementById("hexBoard");
+      svg.innerHTML = "";
+      const activePid = view.turnPlayer;
+
+      for (const [q, r] of HEX_COORDS) {
+        const k = hexKey(q, r);
+        const t = view.tiles[k];
+        const [cx, cy] = axialToPixel(q, r);
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+        let fill = "#1e293b";
+        if (t.owner !== null && view.players[t.owner]) {
+          const baseCol = view.players[t.owner].color;
+          fill = baseCol + "44";
+        } else if (t.terrain === "spire") fill = "#451a03";
+        else if (t.terrain === "crystal") fill = "#083344";
+        else if (t.terrain === "forge") fill = "#3b1704";
+
+        const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        poly.setAttribute("points", hexPoints(cx, cy, HEX_SIZE - 2.5));
+        poly.setAttribute("fill", fill);
+        let cls = "hex-poly";
+        if (selectedHex === k) cls += " hex-selected";
+        else if (selectedHex && areAdjacent(selectedHex, k)) cls += " hex-target";
+        poly.setAttribute("class", cls);
+        if (t.owner !== null && view.players[t.owner]) {
+          poly.setAttribute("stroke", view.players[t.owner].color);
+          poly.setAttribute("stroke-width", "3");
+        }
+
+        poly.addEventListener("click", () => onHexClick(k));
+        g.appendChild(poly);
+
+        // Terrain icon/label
+        const iconMap = {
+          spire: "👑 SPIRE",
+          crystal: "💎 CRYSTAL",
+          forge: "⚒️ FORGE",
+          citadel: "🏰 CITADEL",
+          plains: "PLAINS",
+        };
+        const lbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        lbl.setAttribute("x", cx);
+        lbl.setAttribute("y", cy - 16);
+        lbl.setAttribute("text-anchor", "middle");
+        lbl.setAttribute("fill", t.terrain === "spire" ? "#fbbf24" : t.terrain === "crystal" ? "#38bdf8" : "#94a3b8");
+        lbl.setAttribute("font-size", "9.5");
+        lbl.setAttribute("font-weight", "700");
+        lbl.setAttribute("pointer-events", "none");
+        lbl.textContent = iconMap[t.terrain] || "";
+        g.appendChild(lbl);
+
+        // Units count circle
+        if (t.units > 0 || t.owner !== null) {
+          const uText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          uText.setAttribute("x", cx);
+          uText.setAttribute("y", cy + 8);
+          uText.setAttribute("text-anchor", "middle");
+          uText.setAttribute("fill", "#f8fafc");
+          uText.setAttribute("font-size", "19");
+          uText.setAttribute("font-weight", "800");
+          uText.setAttribute("pointer-events", "none");
+          uText.textContent = `${t.units}${t.bastion ? "🛡️" : ""}`;
+          g.appendChild(uText);
+        }
+
+        // Coord label
+        const cText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        cText.setAttribute("x", cx);
+        cText.setAttribute("y", cy + 27);
+        cText.setAttribute("text-anchor", "middle");
+        cText.setAttribute("fill", "#64748b");
+        cText.setAttribute("font-size", "8.5");
+        cText.setAttribute("pointer-events", "none");
+        cText.textContent = `(${k})`;
+        g.appendChild(cText);
+
+        svg.appendChild(g);
+      }
+
+      // Update action buttons
+      const p = view.players[activePid];
+      const selTile = selectedHex ? view.tiles[selectedHex] : null;
+      const ownsSelected = selTile && selTile.owner === activePid;
+      const isLive = replayIndex === null && state.status === "active";
+
+      const gain = 2 + countOwned(view, activePid, "crystal") * 2;
+      document.getElementById("harvestHint").textContent = `1 AP · +${gain} Gold`;
+      document.getElementById("actHarvest").disabled = !isLive;
+      document.getElementById("actRecruit").disabled = !(isLive && ownsSelected && p.gold >= 2 && selTile.units < 9);
+      document.getElementById("actBastion").disabled = !(isLive && ownsSelected && p.gold >= 3 && !selTile.bastion);
+      document.getElementById("actStrike").disabled = !(isLive && ownsSelected && p.gold >= 3);
+      document.getElementById("actEndTurn").disabled = !isLive;
+
+      // Update Log & Replay Scrubber
+      const logEl = document.getElementById("logList");
+      logEl.innerHTML = "";
+      for (const item of [...state.log].reverse()) {
+        const d = document.createElement("div");
+        d.className = "log-entry";
+        d.textContent = `[R${item.round}] ${item.text}`;
+        logEl.appendChild(d);
+      }
+      const totalSnaps = state.snapshots.length;
+      const curSnap = replayIndex === null ? totalSnaps - 1 : replayIndex;
+      document.getElementById("repLabel").textContent =
+        replayIndex === null ? `Live (Step ${curSnap}/${totalSnaps - 1})` : `Replay ${curSnap}/${totalSnaps - 1}`;
+
+      // Update API snippet
+      document.getElementById("apiSnippetBox").textContent =
+`# 1. Play against a Python AI Agent in this match (${state.code}):
+python sample_bot.py --cloud ${state.code} --seat 1
+
+# 2. Or run local REST server (http://localhost:8787):
+node server.js
+curl -s http://localhost:8787/api/matches/${state.code}
+curl -s -X POST http://localhost:8787/api/matches/${state.code}/move \\
+  -H "Content-Type: application/json" \\
+  -d '{"action":"harvest","playerId":${state.turnPlayer}}'`;
+    }
+
+    function onHexClick(k) {
+      if (replayIndex !== null || state.status !== "active") return;
+      const pid = state.turnPlayer;
+      const clicked = state.tiles[k];
+
+      if (!selectedHex) {
+        if (clicked.owner === pid) {
+          selectedHex = k;
+          pendingMode = "march";
+          document.getElementById("selectionHint").textContent =
+            `Selected (${k}) [${clicked.units} units]. Click an adjacent hex to March, or click Recruit / Bastion / Arcane Strike below.`;
+          renderAll();
+        }
+        return;
+      }
+
+      if (selectedHex === k) {
+        selectedHex = null;
+        document.getElementById("selectionHint").textContent = "Selection cleared.";
+        renderAll();
+        return;
+      }
+
+      if (areAdjacent(selectedHex, k)) {
+        if (pendingMode === "strike") {
+          applyMove(state, { action: "strike", from: selectedHex, to: k });
+          selectedHex = null;
+          pendingMode = "march";
+          return;
+        }
+        if (state.tiles[selectedHex].units >= 2) {
+          applyMove(state, { action: "march", from: selectedHex, to: k });
+          selectedHex = k;
+          return;
+        }
+      }
+
+      if (clicked.owner === pid) {
+        selectedHex = k;
+        pendingMode = "march";
+        renderAll();
+      } else {
+        selectedHex = null;
+        renderAll();
+      }
+    }
+
+    function renderSeatConfig() {
+      const n = Number(document.getElementById("playerCountSelect").value);
+      const wrap = document.getElementById("seatConfigContainer");
+      wrap.innerHTML = "";
+      for (let i = 0; i < n; i++) {
+        const row = document.createElement("div");
+        row.className = "seat-row";
+        row.innerHTML = `
+          <span style="color:${START_CORNERS[i].color};font-weight:700;">Seat ${i + 1}:</span>
+          <select data-seat="${i}">
+            <option value="human" ${seatRoles[i] === "human" ? "selected" : ""}>Human (Browser)</option>
+            <option value="bot:tactician" ${seatRoles[i] === "bot:tactician" ? "selected" : ""}>Tactician Bot</option>
+            <option value="bot:warlord" ${seatRoles[i] === "bot:warlord" ? "selected" : ""}>Warlord Bot</option>
+            <option value="bot:economist" ${seatRoles[i] === "bot:economist" ? "selected" : ""}>Economist Bot</option>
+            <option value="agent:http" ${seatRoles[i] === "agent:http" ? "selected" : ""}>External HTTP Agent</option>
+          </select>
+        `;
+        row.querySelector("select").addEventListener("change", (e) => {
+          seatRoles[i] = e.target.value;
+          if (state && state.players[i]) {
+            const [r, st] = e.target.value.split(":");
+            state.players[i].role = r;
+            state.players[i].style = st || "tactician";
+            state.players[i].name =
+              r === "human" ? `Human P${i + 1}` : r === "agent" ? `HTTP Agent P${i + 1}` : `${(st || "tactician").toUpperCase()} Bot`;
+            renderAll();
+            scheduleBotIfTurn();
+          }
+        });
+        wrap.appendChild(row);
+      }
+    }
+
+    // Cloud HTTP/JSON Relay (ntfy.sh) for zero-setup external Python agent play on GitHub Pages
+    function connectCloudRelay(code) {
+      if (cloudEventSource) {
+        cloudEventSource.close();
+        cloudEventSource = null;
+      }
+      const topic = `hex_sovereign_${code.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+      try {
+        cloudEventSource = new EventSource(`https://ntfy.sh/${topic}/sse`);
+        cloudEventSource.onmessage = (ev) => {
+          try {
+            const data = JSON.parse(ev.data);
+            const msg = JSON.parse(data.message || "{}");
+            if (msg.kind === "join" && state && state.players[msg.seat]) {
+              state.players[msg.seat].name = msg.name || `HTTP Agent P${msg.seat + 1}`;
+              state.players[msg.seat].role = "agent";
+              state.log.push({ seq: state.log.length, round: state.round, player: msg.seat, text: `${state.players[msg.seat].name} connected via HTTP/JSON API.` });
+              renderAll();
+              broadcastCloudState();
+            } else if (msg.kind === "move" && state && state.turnPlayer === msg.playerId) {
+              applyMove(state, msg.move);
+            }
+          } catch (_) {}
+        };
+      } catch (_) {}
+    }
+
+    function broadcastCloudState() {
+      if (!state) return;
+      const topic = `hex_sovereign_${state.code.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: "POST",
+        body: JSON.stringify({
+          kind: "state",
+          state: {
+            code: state.code,
+            status: state.status,
+            round: state.round,
+            turnPlayer: state.turnPlayer,
+            apLeft: state.apLeft,
+            winner: state.winner,
+            players: state.players,
+            tiles: state.tiles,
+            log: state.log.slice(-5),
+          },
+          legalMoves: computeLegalMoves(state),
+        }),
+      }).catch(() => {});
+    }
+
+    // Wire UI buttons
+    document.getElementById("playerCountSelect").addEventListener("change", () => {
+      renderSeatConfig();
+      startNewMatch();
+    });
+    document.getElementById("newMatchBtn").addEventListener("click", () => startNewMatch());
+    document.getElementById("botStepBtn").addEventListener("click", () => {
+      if (state && state.status === "active") {
+        applyMove(state, chooseBotMove(state));
+      }
+    });
+    document.getElementById("simFullBtn").addEventListener("click", () => {
+      if (!state) return;
+      let guard = 0;
+      while (state.status === "active" && guard < 120) {
+        applyMove(state, chooseBotMove(state));
+        guard++;
+      }
+    });
+
+    document.getElementById("actHarvest").addEventListener("click", () => applyMove(state, { action: "harvest" }));
+    document.getElementById("actRecruit").addEventListener("click", () => {
+      if (selectedHex) applyMove(state, { action: "recruit", from: selectedHex });
+    });
+    document.getElementById("actBastion").addEventListener("click", () => {
+      if (selectedHex) applyMove(state, { action: "bastion", from: selectedHex });
+    });
+    document.getElementById("actStrike").addEventListener("click", () => {
+      pendingMode = "strike";
+      document.getElementById("selectionHint").textContent =
+        `Arcane Strike armed from (${selectedHex})! Click an adjacent enemy/neutral hex to deal -2 units & break Bastion.`;
+    });
+    document.getElementById("actEndTurn").addEventListener("click", () => applyMove(state, { action: "end_turn" }));
+
+    document.getElementById("repPrevBtn").addEventListener("click", () => {
+      const cur = replayIndex === null ? state.snapshots.length - 1 : replayIndex;
+      replayIndex = Math.max(0, cur - 1);
+      renderAll();
+    });
+    document.getElementById("repNextBtn").addEventListener("click", () => {
+      if (replayIndex === null) return;
+      if (replayIndex + 1 >= state.snapshots.length - 1) replayIndex = null;
+      else replayIndex += 1;
+      renderAll();
+    });
+    document.getElementById("repLiveBtn").addEventListener("click", () => {
+      replayIndex = null;
+      renderAll();
+    });
+    document.getElementById("repExportBtn").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify({ code: state.code, log: state.log, snapshots: state.snapshots }, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${state.code.toLowerCase()}-replay.json`;
+      a.click();
+    });
+    document.getElementById("syncCloudBtn").addEventListener("click", () => broadcastCloudState());
+    document.getElementById("copyStateBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(JSON.stringify({ state, legalMoves: computeLegalMoves(state) }, null, 2));
+    });
+
+    function startNewMatch() {
+      const codeInput = document.getElementById("matchCodeInput").value.trim().toUpperCase() || "HEX-DEMO";
+      const n = Number(document.getElementById("playerCountSelect").value);
+      selectedHex = null;
+      replayIndex = null;
+      state = createMatchState(codeInput, n);
+      connectCloudRelay(codeInput);
+      renderAll();
+      broadcastCloudState();
+      scheduleBotIfTurn();
+    }
+
+    renderSeatConfig();
+    startNewMatch();
+  </script>
+</body>
+</html>
